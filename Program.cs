@@ -1,4 +1,6 @@
 ﻿using System;
+using System.IO;
+using System.Linq;
 using System.Collections.Generic;
 
 using SongNode = Node<Song, Word>;
@@ -7,18 +9,23 @@ namespace traveling_beatles
 {
     class Program
     {
+        const string LYRIC_DIR = "lyrics_db";
+
         static void Main(string[] args)
         {
             // Build a graph where the nodes are songs and the edges connect songs that share a word in their lyrics
+            Console.WriteLine("Starting...");
+
             List<Song> songs = GetSongs();
             var graphNodes = BuildGraph(songs);
 
             foreach (SongNode node in graphNodes)
             {
                 Console.WriteLine($"Song {node.Value.Title}:");
-                foreach (var edge in node.Edges)
+                var edgesByWord = node.Edges.GroupBy(e => e.Value);
+                foreach (var wordGrouping in edgesByWord.OrderBy(w => w.Count()))
                 {
-                    Console.WriteLine($"\tconnected via '{edge.Value.Value}' to song {edge.OtherEnd.Value.Title}");
+                    Console.WriteLine($"\tconnected via '{wordGrouping.Key.Value}' to {wordGrouping.Count()} other songs");
                 }
             }
         }
@@ -81,13 +88,33 @@ namespace traveling_beatles
         private static List<Song> GetSongs()
         {
             // stubbing this out, will implement at end
-            return new List<Song>
+            // return new List<Song>
+            // {
+            //     new Song("Hey Jude", "Hey Jude, don't make it bad, take a sad song and make it better"),
+            //     new Song("Let It Be", "Mother Mary comes to me, speaking words of wisdom, let it be"),
+            //     new Song("She Loves You", "Well I saw her yesterday, it's you she's thinking of, and she told me what to say"),
+            //     new Song("I'm Down", "I'm down, I'm down, how can you laugh when you know I'm down"),
+            // };
+            var songs = new List<Song>();
+
+            var lyricFiles = Directory.GetFiles(LYRIC_DIR);
+
+            int limit = 20;
+
+            foreach (string lyricFileName in lyricFiles)
             {
-                new Song("Hey Jude", "Hey Jude, don't make it bad, take a sad song and make it better"),
-                new Song("Let It Be", "Mother Mary comes to me, speaking words of wisdom, let it be"),
-                new Song("She Loves You", "Well I saw her yesterday, it's you she's thinking of, and she told me what to say"),
-                new Song("I'm Down", "I'm down, I'm down, how can you laugh when you know I'm down"),
-            };
+                string content = File.ReadAllText(lyricFileName);
+                Song song = new Song(lyricFileName, content);
+                songs.Add(song);
+                limit--;
+
+                if (limit <= 0)
+                {
+                    break;
+                }
+            }
+
+            return songs;
         }
     }
 }

@@ -1,5 +1,7 @@
 using System.Collections.Generic;
 using static System.Array;
+using System;
+using System.Linq;
 
 public class Song
 {
@@ -11,7 +13,28 @@ public class Song
         this.Title = title;
         this.LyricSet = new HashSet<Word>();
 
-        ForEach(lyrics.Split(' '), s => this.LyricSet.Add(Word.From(s)));
+        foreach (string splitWord in lyrics.Split(default(char[]), StringSplitOptions.RemoveEmptyEntries))
+        {
+            string sanitized = Sanitize(splitWord);
+            this.LyricSet.Add(Word.From(sanitized));
+        }
+    }
+
+    private static string Sanitize(string s)
+    {
+        var excludeChars = new HashSet<char>
+        {
+            ',',
+            ';',
+            '!',
+            '?',
+            '.',
+            '\'',
+        };
+
+        var filteredEnum = s.Where(c => !excludeChars.Contains(c));
+
+        return string.Concat(filteredEnum);
     }
 
     public override bool Equals(object obj)
