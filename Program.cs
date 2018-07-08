@@ -19,6 +19,8 @@ namespace traveling_beatles
             List<Song> songs = GetSongs();
             var graphNodes = BuildGraph(songs);
 
+            Console.WriteLine($"Created graph of size: {graphNodes.Count} nodes");
+
             foreach (SongNode node in graphNodes)
             {
                 Console.WriteLine($"Song {node.Value.Title}:");
@@ -99,7 +101,7 @@ namespace traveling_beatles
 
             var lyricFiles = Directory.GetFiles(LYRIC_DIR);
 
-            int limit = 20;
+            int limit = 200;
 
             foreach (string lyricFileName in lyricFiles)
             {
