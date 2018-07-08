@@ -23,19 +23,26 @@ namespace traveling_beatles
             Console.WriteLine("Graph generated.");
             Console.WriteLine("Traversing...");
 
-            Stack<SongNode> path = Traverse(graph);
+            var path = Traverse(graph);
 
             ShowPathInfo(path);
         }
 
-        private static void ShowPathInfo(Stack<SongNode> path)
+        private static void ShowPathInfo(Tuple<SongNode, Stack<SongEdge>> path)
         {
+            var pathList = path.Item2.Reverse().ToList();
+            SongNode firstSong = path.Item1;
+
             if (path != null)
             {
                 Console.WriteLine("Found a path!");
-                while (path.TryPop(out SongNode current))
+
+                SongNode prevNode = firstSong;
+
+                foreach (SongEdge edge in pathList)
                 {
-                    Console.WriteLine($"{current.Value.Title} -->");
+                    Console.WriteLine($"{prevNode.Value.Title} --> {edge.OtherEnd.Value.Title} via word '{edge.Value.Value}'");
+                    prevNode = edge.OtherEnd;
                 }
             }
             else
@@ -90,7 +97,7 @@ namespace traveling_beatles
 
         /// Attempt traversing the entire graph
         /// with the constraint that we can only use each word once
-        private static Stack<SongNode> Traverse(HashSet<SongNode> graph)
+        private static Tuple<SongNode, Stack<SongEdge>> Traverse(HashSet<SongNode> graph)
         {
             // once used, can't re-use these words
             var usedEdges = new HashSet<Word>();
@@ -101,13 +108,13 @@ namespace traveling_beatles
             {
                 var resultingPath = TraverseHelper(startingNode,
                                                    graph,
-                                                   new Stack<SongNode>(),
+                                                   new Stack<SongEdge>(),
                                                    new HashSet<SongNode>(),
                                                    new HashSet<Word>());
 
                 if (resultingPath != null)
                 {
-                    return resultingPath;
+                    return Tuple.Create(startingNode, resultingPath);
                 }
                 else
                 {
@@ -119,15 +126,14 @@ namespace traveling_beatles
             return null;
         }
 
-        private static Stack<SongNode> TraverseHelper(SongNode curNode,
+        private static Stack<SongEdge> TraverseHelper(SongNode curNode,
                                                       HashSet<SongNode> graph,
-                                                      Stack<SongNode> path,
+                                                      Stack<SongEdge> path,
                                                       HashSet<SongNode> visited,
                                                       HashSet<Word> usedWords)
         {
             // we're visiting this node right now
             visited.Add(curNode);
-            path.Push(curNode);
 
             // does this conclude our travel?
             if (visited.Count == graph.Count)
@@ -148,15 +154,22 @@ namespace traveling_beatles
                 Word curWord = wordGroup.Key;
                 usedWords.Add(curWord);
 
-                foreach (SongNode nextNode in wordGroup.Select(e => e.OtherEnd)
-                                                       .Where(n => !visited.Contains(n)))
+                foreach (SongEdge edge in wordGroup.Where(e => !visited.Contains(e.OtherEnd)))
                 {
+                    SongNode nextNode = edge.OtherEnd;
+
                     // visit the node
+                    path.Push(edge);
+
                     var result = TraverseHelper(nextNode, graph, path, visited, usedWords);
 
                     if (result != null)
                     {
                         return result;
+                    }
+                    else
+                    {
+                        path.Pop();
                     }
                 }
 
@@ -166,7 +179,6 @@ namespace traveling_beatles
             // All paths through this node didn't work out,
             // so remove it from visited and the stack
             visited.Remove(curNode);
-            path.Pop();
 
             return null;
         }
@@ -211,7 +223,7 @@ namespace traveling_beatles
 
             var lyricFiles = Directory.GetFiles(LYRIC_DIR);
 
-            int limit = 10;
+            int limit = 5;
 
             foreach (string lyricFileName in lyricFiles)
             {
