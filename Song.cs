@@ -30,6 +30,8 @@ public class Song
             '?',
             '.',
             '\'',
+            ')',
+            '(',
         };
 
         var filteredEnum = s.Where(c => !excludeChars.Contains(c));

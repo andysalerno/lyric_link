@@ -4,6 +4,7 @@ using System.Linq;
 using System.Collections.Generic;
 
 using SongNode = Node<Song, Word>;
+using SongEdge = Edge<Word, Song>;
 
 namespace traveling_beatles
 {
@@ -17,8 +18,34 @@ namespace traveling_beatles
             Console.WriteLine("Starting...");
 
             List<Song> songs = GetSongs();
-            var graphNodes = BuildGraph(songs);
+            var graph = BuildGraph(songs);
 
+            Console.WriteLine("Graph generated.");
+            Console.WriteLine("Traversing...");
+
+            Stack<SongNode> path = Traverse(graph);
+
+            ShowPathInfo(path);
+        }
+
+        private static void ShowPathInfo(Stack<SongNode> path)
+        {
+            if (path != null)
+            {
+                Console.WriteLine("Found a path!");
+                while (path.TryPop(out SongNode current))
+                {
+                    Console.WriteLine($"{current.Value.Title} -->");
+                }
+            }
+            else
+            {
+                Console.WriteLine("No path found.");
+            }
+        }
+
+        private static void ShowHelpfulInfo(HashSet<SongNode> graphNodes)
+        {
             Console.WriteLine($"Created graph of size: {graphNodes.Count} nodes");
 
             foreach (SongNode node in graphNodes)
@@ -61,6 +88,89 @@ namespace traveling_beatles
             return graphNodes;
         }
 
+        /// Attempt traversing the entire graph
+        /// with the constraint that we can only use each word once
+        private static Stack<SongNode> Traverse(HashSet<SongNode> graph)
+        {
+            // once used, can't re-use these words
+            var usedEdges = new HashSet<Word>();
+            var visitedNodes = new HashSet<SongNode>();
+
+            // Try each as our starting node
+            foreach (SongNode startingNode in graph)
+            {
+                var resultingPath = TraverseHelper(startingNode,
+                                                   graph,
+                                                   new Stack<SongNode>(),
+                                                   new HashSet<SongNode>(),
+                                                   new HashSet<Word>());
+
+                if (resultingPath != null)
+                {
+                    return resultingPath;
+                }
+                else
+                {
+                    continue;
+                }
+            }
+
+            // didn't find a path :(
+            return null;
+        }
+
+        private static Stack<SongNode> TraverseHelper(SongNode curNode,
+                                                      HashSet<SongNode> graph,
+                                                      Stack<SongNode> path,
+                                                      HashSet<SongNode> visited,
+                                                      HashSet<Word> usedWords)
+        {
+            // we're visiting this node right now
+            visited.Add(curNode);
+            path.Push(curNode);
+
+            // does this conclude our travel?
+            if (visited.Count == graph.Count)
+            {
+                // all done
+                return path;
+            }
+
+            var usableEdges = curNode.Edges.Where(e => !usedWords.Contains(e.Value));
+
+            // group edges using the same word
+            // with the lowest count of neighbors first
+            var groupedByWord = usableEdges.GroupBy(e => e.Value)
+                                           .OrderBy(p => p.Count());
+
+            foreach (var wordGroup in groupedByWord)
+            {
+                Word curWord = wordGroup.Key;
+                usedWords.Add(curWord);
+
+                foreach (SongNode nextNode in wordGroup.Select(e => e.OtherEnd)
+                                                       .Where(n => !visited.Contains(n)))
+                {
+                    // visit the node
+                    var result = TraverseHelper(nextNode, graph, path, visited, usedWords);
+
+                    if (result != null)
+                    {
+                        return result;
+                    }
+                }
+
+                usedWords.Remove(curWord);
+            }
+
+            // All paths through this node didn't work out,
+            // so remove it from visited and the stack
+            visited.Remove(curNode);
+            path.Pop();
+
+            return null;
+        }
+
         private static HashSet<SongNode> GraphFromDict(Dictionary<Word, HashSet<SongNode>> dict)
         {
             var allNodes = new HashSet<SongNode>();
@@ -101,7 +211,7 @@ namespace traveling_beatles
 
             var lyricFiles = Directory.GetFiles(LYRIC_DIR);
 
-            int limit = 200;
+            int limit = 10;
 
             foreach (string lyricFileName in lyricFiles)
             {
