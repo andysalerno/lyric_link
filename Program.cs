@@ -20,6 +20,12 @@ namespace traveling_beatles
             List<Song> songs = GetSongs();
             var graph = BuildGraph(songs);
 
+            Console.WriteLine($"Generating graph for {graph.Count} songs:");
+            foreach (SongNode song in graph)
+            {
+                Console.WriteLine($"\t{song.Value.Title}");
+            }
+
             Console.WriteLine("Graph generated.");
             Console.WriteLine("Traversing...");
 
@@ -223,12 +229,13 @@ namespace traveling_beatles
 
             var lyricFiles = Directory.GetFiles(LYRIC_DIR);
 
-            int limit = 5;
+            int limit = 500;
 
             foreach (string lyricFileName in lyricFiles)
             {
                 string content = File.ReadAllText(lyricFileName);
-                Song song = new Song(lyricFileName, content);
+                string prettyFileName = lyricFileName.Split('\\')[1];
+                Song song = new Song(prettyFileName, content);
                 songs.Add(song);
                 limit--;
 
